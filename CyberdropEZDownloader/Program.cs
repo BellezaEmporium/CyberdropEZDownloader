@@ -30,10 +30,11 @@ namespace CyberdropEZDownloader
                 var response = await client.GetStringAsync(givenLink);
 
                 // regex 1 : détecter le nom donné au dossier Cyberdrop
-                var nom_album = new Regex("<h1 id=\"title\" class=\"title has-text-centered\" title=\"(.+?)\">").Matches(response);
+                Match regex1 = Regex.Match(response, "<h1 id=\"title\" class=\"title has-text-centered\" title=\"(.+?)\">", RegexOptions.Compiled);
+                var nom_album = regex1.Groups[1].Value;
 
                 // regex 2 : trouver le nombre de fichiers inclus dans le dossier
-                var matches = new Regex("data-src=\"https://fs-0([0-9]).cyberdrop.(cc|to)/((?:(?!\bs\b)))(.+?)\"", RegexOptions.Compiled).Matches(response);
+                MatchCollection matches = Regex.Matches(response, "data-src=\"https://fs-0([0-9]).cyberdrop.(cc|to)/((?:(?!\bs\b)))(.+?)\"", RegexOptions.Compiled);
 
                 // le compteur est surtout visuel
                 int compteur = 0;
@@ -41,17 +42,11 @@ namespace CyberdropEZDownloader
                 // ça permet aussi de voir si le lien Cyberdrop est valide, sans vraiment le dire
                 if (matches.Count != 0)
                 {
-                    // si il existe des fichiers, le dossier existe forcément
-                    foreach (Match nom in nom_album)
-                    {
-                        // changement du titre CMD
-                        Console.Title = "Cyberdrop EZ Downloader - " + nom.Groups[1].Value;
-                    }
+                    // changement du titre CMD
+                    Console.Title = "Cyberdrop EZ Downloader - " + nom_album;
                     Console.WriteLine("J'ai trouvé " + matches.Count + " fichiers dans le lien Cyberdrop.");
-
-                    // renseigner le chemin du dossier EN ENTIER !
-                    Console.WriteLine("Ecrivez l'endroit où vous souhaiteriez stocker vos fichiers");
-                    string lienDossier = Console.ReadLine();
+					
+                    string lienDossier = Environment.CurrentDirectory + '/' + nom_album;
 
                     foreach (Match links in matches)
                     {
@@ -59,12 +54,10 @@ namespace CyberdropEZDownloader
                         compteur += 1;
                         
                         // heh, j'suis nul avec les regex cherchez pas plus loin
-                        string lien = links.Value.Replace("\"", "");
-                        string lien2 = lien.Replace("data-src=", "");
-                        string vrailien = lien2.Replace("s/", "");
+                        string lien = links.Groups[1].Value;
 
                         // retrouver le nom du fichier sur le lien de "téléchargement"
-                        Uri url = new Uri(vrailien);
+                        Uri url = new Uri(lien);
                         string filename = System.IO.Path.GetFileName(url.LocalPath);
 
                         // le console.clear() est pour éviter de tout afficher quand il télécharge, 1 à la fois ça suffit
@@ -76,7 +69,7 @@ namespace CyberdropEZDownloader
                         using var downloader = new WebClient();
                         try
                         {
-                            downloader.DownloadFile(vrailien, lienDossier + filename);
+                            downloader.DownloadFile(lien, lienDossier + filename);
                         }
                         catch(WebException ex)
                         {
