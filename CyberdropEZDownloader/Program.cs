@@ -45,7 +45,6 @@ namespace CyberdropEZDownloader
                 {
                     // changement du titre CMD
                     Console.Title = "Cyberdrop EZ Downloader - " + nom_album;
-                    Console.WriteLine("J'ai trouvé " + matches.Count + " fichiers dans le lien Cyberdrop.");
 					
                     string lienDossier = Environment.CurrentDirectory + '/' + nom_album;
                     if (!Directory.Exists(lienDossier))
@@ -58,7 +57,7 @@ namespace CyberdropEZDownloader
                         // incrémenter le compteur à chaque fichier téléchargé
                         compteur += 1;
                         
-                        // heh, j'suis nul avec les regex cherchez pas plus loin
+                        // récupérer le lien Cyberdrop depuis le match regex.
                         string lien = links.Groups[1].Value;
 
                         // retrouver le nom du fichier sur le lien de "téléchargement"
