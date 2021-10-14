@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Net;
+using System.IO;
 
 namespace CyberdropEZDownloader
 {
@@ -34,7 +35,7 @@ namespace CyberdropEZDownloader
                 var nom_album = regex1.Groups[1].Value;
 
                 // regex 2 : trouver le nombre de fichiers inclus dans le dossier
-                MatchCollection matches = Regex.Matches(response, "data-src=\"https://fs-0([0-9]).cyberdrop.(cc|to)/((?:(?!\bs\b)))(.+?)\"", RegexOptions.Compiled);
+                MatchCollection matches = Regex.Matches(response, "data-src=\"(https://fs-0([0-9]).cyberdrop.(cc|to)/((?:(?!\bs\b)))(.+?))\"", RegexOptions.Compiled);
 
                 // le compteur est surtout visuel
                 int compteur = 0;
@@ -47,6 +48,10 @@ namespace CyberdropEZDownloader
                     Console.WriteLine("J'ai trouvé " + matches.Count + " fichiers dans le lien Cyberdrop.");
 					
                     string lienDossier = Environment.CurrentDirectory + '/' + nom_album;
+                    if (!Directory.Exists(lienDossier))
+                    {
+                        Directory.CreateDirectory(lienDossier);
+                    }
 
                     foreach (Match links in matches)
                     {
@@ -58,7 +63,7 @@ namespace CyberdropEZDownloader
 
                         // retrouver le nom du fichier sur le lien de "téléchargement"
                         Uri url = new Uri(lien);
-                        string filename = System.IO.Path.GetFileName(url.LocalPath);
+                        string filename = Path.GetFileName(url.LocalPath);
 
                         // le console.clear() est pour éviter de tout afficher quand il télécharge, 1 à la fois ça suffit
                         Console.Clear();
