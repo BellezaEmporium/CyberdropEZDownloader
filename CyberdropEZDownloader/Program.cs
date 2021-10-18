@@ -20,6 +20,7 @@ namespace CyberdropEZDownloader
             string givenLink =  Console.ReadLine();
 
             // vérification que le lien donné est bien une URL valide, sinon rejet
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             using HttpClient client = new HttpClient();
             bool result = Uri.TryCreate(givenLink, UriKind.Absolute, out Uri uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
             Uri link = new Uri(givenLink);
@@ -35,7 +36,7 @@ namespace CyberdropEZDownloader
                 var nom_album = regex1.Groups[1].Value;
 
                 // regex 2 : trouver le nombre de fichiers inclus dans le dossier
-                MatchCollection matches = Regex.Matches(response, "data-src=\"(https://fs-0([0-9]).cyberdrop.(cc|to)/((?:(?!\bs\b)))(.+?))\"", RegexOptions.Compiled);
+                MatchCollection matches = Regex.Matches(response, "class=\"image\" href=\"(https://fs-0([0-9]).cyberdrop.(cc|to)/(.+?))\"", RegexOptions.Compiled);
 
                 // le compteur est surtout visuel
                 int compteur = 0;
@@ -46,7 +47,7 @@ namespace CyberdropEZDownloader
                     // changement du titre CMD
                     Console.Title = "Cyberdrop EZ Downloader - " + nom_album;
 					
-                    string lienDossier = Environment.CurrentDirectory + '/' + nom_album;
+                    string lienDossier = Environment.CurrentDirectory + '\\' + nom_album;
                     if (!Directory.Exists(lienDossier))
                     {
                         Directory.CreateDirectory(lienDossier);
@@ -70,24 +71,52 @@ namespace CyberdropEZDownloader
                         Console.WriteLine("Progression : " + compteur + " / " + matches.Count);
 
                         // certains liens redirigent autre part, éviter cela en encapsulant le tout dans un try/catch
-                        using var downloader = new WebClient();
                         try
                         {
-                            downloader.DownloadFile(lien, lienDossier + filename);
+                            using (var downloader = new HttpClient())
+                            {
+                                try
+                                {
+                                    var request = new HttpRequestMessage(HttpMethod.Get, lien);
+                                    var sendTask = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                                    var document = sendTask.Result.EnsureSuccessStatusCode();
+                                    var httpStream = await document.Content.ReadAsStreamAsync();
+                                    var lien_fichier = Path.Combine(lienDossier, filename);
+                                    using var fileStream = File.Create(lien_fichier);
+                                    using (var reader = new StreamReader(httpStream))
+                                    {
+                                        httpStream.CopyTo(fileStream);
+                                        fileStream.Flush();
+                                    }
+                                } catch (HttpRequestException hrex)
+                                {
+                                    Console.WriteLine("Un ou plusieurs fichiers n'ont pas pu être téléchargés : ", hrex);
+                                }
+                            }
+
                         }
-                        catch(WebException ex)
+                        catch (WebException ex)
                         {
                             if (ex.Response.Headers["Location"] != null)
                             {
                                 // si un nouveau lien est détecté, télécharger depuis ce nouveau lien
                                 string nouveaulien = ex.Response.Headers["Location"];
-                                downloader.DownloadFile(nouveaulien, lienDossier + filename);
+                                var request = new HttpRequestMessage(HttpMethod.Get, nouveaulien);
+                                var sendTask = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                                var document = sendTask.Result.EnsureSuccessStatusCode();
+                                var httpStream = await document.Content.ReadAsStreamAsync();
+                                var lien_fichier = Path.Combine(lienDossier, filename);
+                                using var fileStream = File.Create(lien_fichier);
+                                using (var reader = new StreamReader(httpStream))
+                                {
+                                    httpStream.CopyTo(fileStream);
+                                    fileStream.Flush();
+                                }
                             }
                         }
                     }
                     // bien vu
                     Console.WriteLine("Terminé ! Profite !");
-
                 }
                 else
                 {
