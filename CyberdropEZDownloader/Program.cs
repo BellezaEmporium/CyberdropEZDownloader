@@ -70,49 +70,23 @@ namespace CyberdropEZDownloader
                         Console.WriteLine("Téléchargement de : " + filename);
                         Console.WriteLine("Progression : " + compteur + " / " + matches.Count);
 
-                        // certains liens redirigent autre part, éviter cela en encapsulant le tout dans un try/catch
+                        // logique téléchargement avec try/catch pour vérif.
+                        using var downloader = new HttpClient();
                         try
                         {
-                            using (var downloader = new HttpClient())
-                            {
-                                try
-                                {
-                                    var request = new HttpRequestMessage(HttpMethod.Get, lien);
-                                    var sendTask = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-                                    var document = sendTask.Result.EnsureSuccessStatusCode();
-                                    var httpStream = await document.Content.ReadAsStreamAsync();
-                                    var lien_fichier = Path.Combine(lienDossier, filename);
-                                    using var fileStream = File.Create(lien_fichier);
-                                    using (var reader = new StreamReader(httpStream))
-                                    {
-                                        httpStream.CopyTo(fileStream);
-                                        fileStream.Flush();
-                                    }
-                                } catch (HttpRequestException hrex)
-                                {
-                                    Console.WriteLine("Un ou plusieurs fichiers n'ont pas pu être téléchargés : ", hrex);
-                                }
-                            }
-
+                            var request = new HttpRequestMessage(HttpMethod.Get, lien);
+                            var sendTask = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                            var document = sendTask.Result.EnsureSuccessStatusCode();
+                            var httpStream = await document.Content.ReadAsStreamAsync();
+                            var lien_fichier = Path.Combine(lienDossier, filename);
+                            using var fileStream = File.Create(lien_fichier);
+                            using var reader = new StreamReader(httpStream);
+                            httpStream.CopyTo(fileStream);
+                            fileStream.Flush();
                         }
-                        catch (WebException ex)
+                        catch (HttpRequestException ex)
                         {
-                            if (ex.Response.Headers["Location"] != null)
-                            {
-                                // si un nouveau lien est détecté, télécharger depuis ce nouveau lien
-                                string nouveaulien = ex.Response.Headers["Location"];
-                                var request = new HttpRequestMessage(HttpMethod.Get, nouveaulien);
-                                var sendTask = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-                                var document = sendTask.Result.EnsureSuccessStatusCode();
-                                var httpStream = await document.Content.ReadAsStreamAsync();
-                                var lien_fichier = Path.Combine(lienDossier, filename);
-                                using var fileStream = File.Create(lien_fichier);
-                                using (var reader = new StreamReader(httpStream))
-                                {
-                                    httpStream.CopyTo(fileStream);
-                                    fileStream.Flush();
-                                }
-                            }
+                            Console.WriteLine("Un ou plusieurs fichiers n'ont pas pu être téléchargés : ", ex.Message);
                         }
                     }
                     // bien vu
