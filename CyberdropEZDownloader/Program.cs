@@ -32,8 +32,7 @@ namespace CyberdropEZDownloader
                 var response = await client.GetStringAsync(givenLink);
 
                 // regex 1 : détecter le nom donné au dossier Cyberdrop
-                Match regex1 = Regex.Match(response, "<h1 id=\"title\" class=\"title has-text-centered\" title=\"(.+?)\">", RegexOptions.Compiled);
-                var nom_album = regex1.Groups[1].Value;
+                var nom_album = Regex.Match(response, "<h1 id=\"title\" class=\"title has-text-centered\" title=\"(.+?)\">", RegexOptions.Compiled).Groups[1].Value;
 
                 // regex 2 : trouver le nombre de fichiers inclus dans le dossier
                 MatchCollection matches = Regex.Matches(response, "class=\"image\" href=\"(https://fs-0([0-9]).cyberdrop.(cc|to)/(.+?))\"", RegexOptions.Compiled);
